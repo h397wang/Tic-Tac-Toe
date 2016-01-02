@@ -8,10 +8,14 @@
 using namespace std;
 
 #define DEBUG 0
+#define ALPHA_BETA 1
+
 
 State::State(int setup[3][3]){
-	// this version of the constructor copies in the board
-	// it is used by createSubStates function
+	// this is the copy constructor 
+	// it reads in an integer array which is a representation of the the board and creates 
+	// another state with the same board
+	// this function is used by the createSubStates() function
 	
 	if (DEBUG) {cout << "Main constructor called " << endl; }
 	
@@ -35,11 +39,17 @@ State::State(int setup[3][3]){
 	next = NULL;
 	depth = moves;
 	
+	
+	if (ALPHA_BETA){
+		alpha = -100;
+		beta = 100;
+		score = (depth%2 == 1? -100:100); // if its a maximizing node then make score -infinite
+	}
 }
 
 State::State(){
-	// new game
-	// blank board
+	// this constructor creates the a blank board
+	
 	cout << "Starting a new game of Tic Tac Toe" << endl;
 	depth = 0;
 	
@@ -55,6 +65,7 @@ State::State(){
 }
 
 State::~State(){
+	
 	//cout << "Destructor called for this State" << endl;
 	
 	// destructor deletes all of its children before deleting itself
@@ -117,11 +128,10 @@ void State::createSubStates(){
 
 bool State::isComplete(){
 	
-	// this is used by the minimax, but I want an ingame one...
 	/*
-	
-	Returns true if it's a leaf node (aka depth 8) or if there is a winner, it modifies it's score value
-	so that getScore can return it
+	This function is used by the AI to check the state of the game
+	Returns true if it's a leaf node (of depth 9) or if there is a winner
+	It then modifies the score value of the state so that getScore() can return it
 	Else it returns false
 
 	*/
@@ -195,10 +205,13 @@ bool State::isComplete(){
 void State::decide(){
 	
 	if (DEBUG){ cout << "decide() called " << endl; }
+	
 	/*
-	this function is the AI. for each of the states children, use getScore and keep track of which one is the best
-	then use placeMove or whatever to do so and progress the game to the other players turn
+	this function is the AI, it decided on the optimal move for the AI. 
+	For each of the states children, use getScore() and keep track of which one is the best
+	The AI then calls placeMove()
 	*/
+	
 	// initiate 
 	createSubStates();
 	State *current = children->next;
@@ -252,17 +265,13 @@ void State::decide(){
 	
 }
 
-int State::getScore(){ // aka minimax
+int State::getScore(){ 
 	
 	/*
 	This is the recursive function. The Base Case is when the state called upon is a completed State.
-	The return valuei is 0 for tie, 1 for a win or -1 for a loss (depending on minimax).
-	
-		in order to get the score from the substates, they must be created first...
-		when the max score is returned, the corresponding choice has to be executed...somehow
-		the solution would be to have an outer function that calls this...?
-		When the score of the state is determined, it should be "complete"
-	Else the function call is made for all substates.
+	The return value is 0 for tie, 10 for a win or -10 for a loss (depending on minimax).
+	If the state is complete, then the score is returned
+	Else the function call is made for all its children states.
 	*/
 	
 	if (DEBUG){ printBoard(); }
@@ -303,13 +312,13 @@ int State::getScore(){ // aka minimax
 		if (depth%2 == 1){ // computer is 2, should return max...
 			
 			if (DEBUG){ cout << " choosing max " << scoresList.getMax() << endl;
-			cout << " from : "; scoresList.print();
+				cout << " from : "; scoresList.print();
 			}
 			// choose max
 			return scoresList.getMax();
 		}else{
 			if (DEBUG){ cout << "choosing min " << scoresList.getMin() << endl;
-			cout << " from : "; scoresList.print();
+				cout << " from : "; scoresList.print();
 			}
 			
 			return scoresList.getMin();
@@ -356,11 +365,14 @@ void State::placeMove(int x, int y){ // x indicates the row, y indicates the col
 	}
 	
 	depth++;
-	printBoard();
+	if (DEBUG){ printBoard(); }
 }
 
-void State::placeMove(State *ptr){ // this is used in the recursive function, basically copies another board
-
+void State::placeMove(State *ptr){ 
+	/*
+	this is used by the AI
+	it basically copies another board
+	*/
 	for (int row = 0; row < 3; row ++){
 		for (int col = 0; col < 3; col ++){
 			board[row][col] = ptr->board[row][col];
@@ -389,8 +401,12 @@ State* State::getChildrenHeader(){
 }
 
 bool State::aWinner(){
-	// this is used in the main function to test whether or not the game should continue
-	// check diagnals
+	
+	/*
+	This is used in the main function to test whether or not the game should continue
+	Implementation is the same as isComplete(), with some content removed
+	*/
+	
 	if (board[0][0] == board[1][1] && board[0][0] == board[2][2] && board[0][0] != 0){
 
 		cout << "Player " << board[0][0] << "is the winner" << endl;
@@ -440,7 +456,11 @@ bool State::aWinner(){
 
 bool State::aMove(){ // x indicates the row, y indicates the col
 	
-	// player moves
+	/*
+	Player's move. Prompts for coordinates and checks for the validity of the move
+	Returns true for a sucessful move
+	*/
+	
 	int x, y;
 	
 	cin >> x >> y;
@@ -486,6 +506,9 @@ bool State::aMove(){ // x indicates the row, y indicates the col
 
 void State::aMove(State *ptr){ // this is used in the recursive function, basically copies another board
 
+	/*
+	Used by the AI, similar to the one above.
+	*/
 	for (int row = 0; row < 3; row ++){
 		for (int col = 0; col < 3; col ++){
 			board[row][col] = ptr->board[row][col];
